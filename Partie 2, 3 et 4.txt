@@ -1,0 +1,184 @@
+////////////////Partie 2/////////////////////
+
+Contraints ajoutés :
+ALTER TABLE utilisateur
+ADD CONSTRAINT check_type CHECK (type IN ('etudiant', 'enseignant'));
+ALTER TABLE utilisateur
+ADD CONSTRAINT check_population CHECK (type IN ('FIPA1','FIPA2','FIPA3','FISE1','FISE2','FISE3'));
+
+
+-- Insert sample data for 'utilisateur' table
+INSERT INTO utilisateur(login, nom, prenom, courrier, population, type, mdp)
+VALUES ('Defude', 'Doe', 'John', 'john.doe@email.com', 'FIPE-1', 'enseignant', 'password123'),
+       ('AStudent', 'Smith', 'Alice', 'alice.smith@email.com', 'FIPE-1', 'etudiant', 'password456'),
+       ('BStudent', 'Johnson', 'Bob', 'bob.johnson@email.com', 'FIPE-1', 'etudiant', 'password789');
+
+-- Insert sample data for 'cours' table
+INSERT INTO cours(titre, description)
+VALUES ('Bases de données', 'Cours sur les bases de données relationnelles'),
+       ('Algorithmique', 'Cours sur les algorithmes et structures de données');
+
+-- Insert sample data for 'estInscrit' table
+INSERT INTO estInscrit(login, idcours)
+VALUES ('Defude', 1),
+       ('Defude', 2),
+       ('AStudent', 1),
+       ('BStudent', 1),
+	 ('BStudent', 2);
+
+-- Insert sample data for 'section' table
+INSERT INTO section(nom, idcours)
+VALUES ('SQL',1),
+('Modele relationelle',1),
+('Tableau',2),
+('Structure',2);
+
+-- Insert sample data for 'devoir' and 'activity' table
+INSERT INTO activity(idsection)
+VALUES (1);
+INSERT INTO activity(idsection)
+VALUES (2);
+
+INSERT INTO devoir(idactivity, titre, description, date, idsection)
+VALUES (1,'Devoir 1', 'Premier devoir sur les bases de données', '2023-05-20 10:00:00', 1);
+
+-- Insert sample data for 'depot' table
+INSERT INTO depot(idutilisateur, datedepot, idactivity)
+VALUES ('AStudent', '2023-05-19 14:00:00', 1),
+       ('BStudent', '2023-05-19 15:30:00', 1);
+
+-- Insert sample data for 'appartient' and 'cohorte'
+INSERT INTO cohorte(nom)
+VALUES('Groupe_FIPA_1A');
+
+-- Insert sample data for 'appartient' and 'cohorte'
+INSERT INTO appartient(idcohorte, login, proprietaire)
+VALUES (1,'Defude', TRUE),
+(1,'AStudent', FALSE),
+(1,'BStudent', FALSE);
+
+
+
+///////////////////////////Partie 3//////////////////////////////////////////
+
+Q1. 
+SELECT u.login, c.titre, u.type
+FROM estInscrit ei
+JOIN utilisateur u ON ei.login = u.login
+JOIN cours c ON ei.idcours = c.idcours
+WHERE u.login = 'Defude'
+ORDER BY c.titre;
+
+
+Q2.
+SELECT DISTINCT u2.login, u2.nom, u2.prenom
+FROM estInscrit ei1
+JOIN utilisateur u1 ON ei1.login = u1.login
+JOIN estInscrit ei2 ON ei1.idcours = ei2.idcours
+JOIN utilisateur u2 ON ei2.login = u2.login
+WHERE u1.login = 'Defude' AND u1.type = 'enseignant' AND u2.type = 'etudiant';
+
+
+Q3.
+SELECT u.login, u.nom, u.prenom
+FROM depot d
+JOIN devoir dv ON d.idactivity = dv.idactivity
+JOIN activity a ON dv.idactivity = a.idactivity
+JOIN utilisateur u ON d.idutilisateur = u.login
+JOIN section s ON a.idsection = s.idsection
+JOIN cours c ON s.idcours = c.idcours
+WHERE c.titre = 'Bases de données';
+
+
+Q4.
+SELECT COUNT(a.idactivity) AS num_activities
+FROM activity a
+JOIN section s ON a.idsection = s.idsection
+JOIN cours c ON s.idcours = c.idcours
+WHERE c.titre = 'Bases de données';
+
+
+Q5.
+SELECT c.titre, COUNT(ei.login) AS num_students
+FROM cours c
+JOIN estInscrit ei ON c.idcours = ei.idcours
+JOIN utilisateur u ON ei.login = u.login
+WHERE u.type = 'etudiant'
+GROUP BY c.titre
+ORDER BY num_students DESC;
+
+
+
+/////////////////////////Partie 4 //////////////////////////////////////////
+
+1. Liste des relations et opérations pour chaque catégorie d'utilisateur :
+Élèves :
+
+utilisateur : interrogation (uniquement leurs propres informations)
+cours : interrogation
+section : interrogation
+activity : interrogation
+fic : interrogation
+url : interrogation
+devoir : interrogation
+depot : interrogation, insertion (uniquement pour leurs propres dépôts)
+
+
+Enseignants :
+
+utilisateur : interrogation (uniquement leurs propres informations)
+cours : interrogation, insertion, mise à jour, suppression
+section : interrogation, insertion, mise à jour, suppression
+activity : interrogation, insertion, mise à jour, suppression
+fic : interrogation, insertion, mise à jour, suppression
+url : interrogation, insertion, mise à jour, suppression
+devoir : interrogation, insertion, mise à jour, suppression
+depot : interrogation
+cohorte : interrogation, insertion, mise à jour, suppression
+estInscrit : interrogation, insertion, suppression
+appartient : interrogation, insertion, suppression
+
+
+
+2. Définition en SQL d'au moins une vue pour chaque catégorie d'utilisateur :
+
+Élèves : Liste des cours auxquels un élève est inscrit
+
+CREATE VIEW student_courses AS
+SELECT u.login, c.titre
+FROM estInscrit ei
+JOIN utilisateur u ON ei.login = u.login
+JOIN cours c ON ei.idcours = c.idcours
+WHERE u.type = 'etudiant';
+
+
+Enseignants : Liste des cours où un enseignant est inscrit
+
+CREATE VIEW teacher_courses AS
+SELECT u.login, c.titre
+FROM estInscrit ei
+JOIN utilisateur u ON ei.login = u.login
+JOIN cours c ON ei.idcours = c.idcours
+WHERE u.type = 'enseignant';
+	
+
+3.Code SQL pour créer un utilisateur étudiant et un utilisateur enseignant :
+Dans information_schema, USER_PRIVILEGES :
+CREATE USER 'AStudent'@'localhost' IDENTIFIED BY '12345';
+CREATE USER 'Defude'@'localhost' IDENTIFIED BY '12345';
+
+
+4.Ensemble des droits (requêtes GRANT en SQL) pour chaque utilisateur :
+
+Étudiant :
+
+GRANT INSERT, UPDATE, DELETE ON projet.depot TO 'AStudent';
+GRANT SELECT ON projet.* TO 'AStudent';
+
+
+Enseignant :
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON projet.* TO 'Defude';
+
+
+
